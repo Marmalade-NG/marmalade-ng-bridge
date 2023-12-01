@@ -1,0 +1,39 @@
+(begin-tx)
+(env-sigs [{'key:"adm", 'caps:[]}])
+(env-data {'admin_keyset:"user.admin",
+           'extra_policies_admin_keyset:"user.admin"})
+
+(use basic-guards)
+(define-namespace 'marmalade-ng-bridge GUARD_SUCCESS GUARD_SUCCESS)
+(define-namespace 'marmalade-ng-bridge-B GUARD_SUCCESS GUARD_SUCCESS)
+
+(namespace 'marmalade-ng-bridge)
+(load "../../pact/interfaces/generic-burnable-nft-v1.pact")
+(load "../../pact/interfaces/marmalade-burn-helper-v1.pact")
+
+(load "../.pact/bridge-utils.pact")
+(load "../.pact/bridge.pact")
+
+(load "../.pact/policies/A_policy-bridge-inbound.pact")
+(create-table bridge-data)
+(load "../.pact/policies/A_policy-bridge-outbound.pact")
+(create-table bridge-data)
+(load "../.pact/policies/A_policy-bridge-inbound-guard-mint.pact")
+(create-table bridge-data)
+(load "../.pact/policies/A_policy-bridge-inbound-instant-mint.pact")
+(create-table bridge-data)
+(load "../.pact/policies/A_bridge-std-policies.pact")
+
+
+(namespace 'marmalade-ng-bridge-B)
+(load "../.pact/policies/B_policy-bridge-inbound.pact")
+(create-table bridge-data)
+(load "../.pact/policies/B_policy-bridge-outbound.pact")
+(create-table bridge-data)
+(load "../.pact/policies/B_policy-bridge-inbound-guard-mint.pact")
+(create-table bridge-data)
+(load "../.pact/policies/B_policy-bridge-inbound-instant-mint.pact")
+(create-table bridge-data)
+(load "../.pact/policies/B_bridge-std-policies.pact")
+
+(commit-tx)

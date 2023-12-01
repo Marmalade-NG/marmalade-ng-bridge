@@ -1,0 +1,9 @@
+.pact-history
+tx.json
+tx.yaml
+deployment/keys/*.yaml
+deployment/tx_*.json
+deployment/tx_*.yaml
+deployment/.pact/*
+doc/build/
+tests/.pact

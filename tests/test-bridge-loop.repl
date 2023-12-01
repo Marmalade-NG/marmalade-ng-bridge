@@ -1,0 +1,271 @@
+(env-data {"disable-marmalade-v1":true})
+(load "kadena_repl_sandbox/kda-env/init.repl")
+(load "init/init-marmalade-ng.repl")
+(load "init/init-bridge.repl")
+
+
+(begin-tx)
+(use marmalade-ng-A.ledger)
+(use marmalade-ng-A.std-policies)
+(use free.util-strings)
+
+
+(env-sigs [{'key:"create", 'caps:[(ENFORCE-RESERVED)]},
+           {'key:"create-2", 'caps:[(ENFORCE-RESERVED)]}])
+
+(env-data {'ks-c-1: ["create"],
+           'ks-c-2: ["create-2"]})
+
+(print (+ "Token ID: => " (create-token-id (read-keyset 'ks-c-1) "http://token-1" )))
+(print (+ "Token ID: => " (create-token-id (read-keyset 'ks-c-2) "http://token-1" )))
+
+(env-data {'ks-c-1: ["create"],
+           'marmalade_bridge_inbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                      'source:{'ledger:"marmalade-ng-A.ledger",
+                                              'token:"t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE",
+                                              'chain:""}},
+           'marmalade_bridge_outbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                       'dest:{'ledger:"marmalade-ng-A.ledger",
+                                               'token:"t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE",
+                                               'chain:""}}})
+
+(create-token "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" 1 "http://token-1"
+              [marmalade-ng-bridge.policy-bridge-inbound-instant-mint,
+               marmalade-ng-bridge.policy-bridge-outbound]
+              (read-keyset 'ks-c-1))
+
+(env-data {'ks-c-2: ["create-2"],
+           'marmalade_bridge_inbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                      'source:{'ledger:"marmalade-ng-A.ledger",
+                                               'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                                               'chain:""}},
+           'marmalade_bridge_outbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                       'dest:{'ledger:"marmalade-ng-A.ledger",
+                                              'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                                              'chain:""}}})
+
+(create-token "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE" 1 "http://token-1"
+              [marmalade-ng-bridge.policy-bridge-inbound,
+               marmalade-ng-bridge.policy-bridge-outbound]
+              (read-keyset 'ks-c-2))
+
+(env-data {'alice-ks:["alice"]})
+
+(mint "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" (read-keyset 'alice-ks) 1.0)
+
+(expect-failure "The second token is not mintable"
+  (mint "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE" "alice" (read-keyset 'alice-ks) 1.0))
+
+(print "")
+(print "Balances for Alice:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+
+(print "")
+(print "Supplies")
+(print (join "\n" (map (compose (lambda (x) [x,(total-supply x)]) (format "{}: {}"))
+                       ["t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                        "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"])))
+
+(expect "Total supply of token 1 should be 1.0" 1.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(expect "Total supply of token 2 should be 0.0" 0.0 (total-supply "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"))
+(commit-tx)
+
+
+; Bridge from token 1 to token 2
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+
+(bridge-ng-loop marmalade-ng-A.ledger
+                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                "alice" 1.0)
+
+(print "")
+(print "Balances for Alice:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+
+(print "")
+(print "Supplies")
+(print (join "\n" (map (compose (lambda (x) [x,(total-supply x)]) (format "{}: {}"))
+                       ["t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                        "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"])))
+
+(expect "Total supply of token 1 should be 0.0" 0.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(expect "Total supply of token 2 should be 1.0" 1.0 (total-supply "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"))
+(commit-tx)
+
+
+; Bridge from token 2 to token 1
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE" "alice" 1.0)]}])
+
+(bridge-ng-loop marmalade-ng-A.ledger
+                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                "alice" 1.0)
+
+(print "")
+(print "Balances for Alice:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+
+(print "")
+(print "Supplies")
+(print (join "\n" (map (compose (lambda (x) [x,(total-supply x)]) (format "{}: {}"))
+                       ["t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                        "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"])))
+
+(expect "Total supply of token 1 should be 1.0" 1.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(expect "Total supply of token 2 should be 0.0" 0.0 (total-supply "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"))
+(commit-tx)
+
+
+; Bridge from token 1 to token 2 but with bad destination target
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-outbound)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+
+
+(expect-failure "Without signature" "Keyset failure"
+                (remove-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM")]}])
+(remove-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM")
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+(expect-failure "Destination removed" "Bridge disabled"
+                (bridge-ng-loop marmalade-ng-A.ledger
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                                "alice" 1.0))
+
+(rollback-tx)
+
+
+
+; Bridge from token 1 to token 2 but with bad destination target
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-outbound)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+(expect-failure "Without signature" "Keyset failure"
+                (set-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                  {'ledger:"marmalade-ng-B.ledger", 'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM", 'chain:""} ))
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM")]},
+           {'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+(set-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                 {'ledger:"marmalade-ng-B.ledger", 'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM", 'chain:""})
+
+(expect-failure "Bad destination" "require-capability: not granted"
+                (bridge-ng-loop marmalade-ng-A.ledger
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                                "alice" 1.0))
+
+
+
+(set-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                 {'ledger:"marmalade-ng-A.ledger", 'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM", 'chain:""})
+
+(expect-failure "Bad destination" "require-capability: not granted"
+                (bridge-ng-loop marmalade-ng-A.ledger
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                                "alice" 1.0))
+(rollback-tx)
+
+
+
+; Bridge from token 1 to token 2 but with bad source target
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+(expect-failure "Without signature" "Keyset failure"
+                (remove-source "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"))
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE")]}])
+(remove-source "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE")
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+(expect-failure "Source removed" "Bridge disabled"
+                (bridge-ng-loop marmalade-ng-A.ledger
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                                "alice" 1.0))
+
+(rollback-tx)
+
+
+; Bridge from token 1 to token 2 but with bad source target
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+(use marmalade-ng-A.ledger)
+
+
+(expect-failure "Without signature" "Keyset failure"
+                (set-source "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                            {'ledger:"marmalade-ng-B.ledger", 'token:"t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE", 'chain:""} ))
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE")]},
+           {'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+(set-source "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+            {'ledger:"marmalade-ng-B.ledger", 'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM", 'chain:""})
+
+(expect-failure "Bad destination" "require-capability: not granted"
+                (bridge-ng-loop marmalade-ng-A.ledger
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                                "alice" 1.0))
+(rollback-tx)
+
+; Bridge from token 1 to token 2 but with another bad source target
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+(use marmalade-ng-A.ledger)
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE")]},
+           {'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+
+(set-source "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+            {'ledger:"marmalade-ng-A.ledger", 'token:"t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE", 'chain:""})
+
+(expect-failure "Bad destination" "require-capability: not granted"
+                (bridge-ng-loop marmalade-ng-A.ledger
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                                "alice" 1.0))
+(rollback-tx)
+
+; Sanity check (try to do after rollback)
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+(use marmalade-ng-A.ledger)
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE")]},
+           {'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+
+(bridge-ng-loop marmalade-ng-A.ledger
+                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                "t:i_vzrOVknruWBZ6n-9huBtk8_0kw4t2VHp5c14QcwmE"
+                "alice" 1.0)
+
+(rollback-tx)

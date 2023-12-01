@@ -1,0 +1,6 @@
+[submodule "tests/marmalade-ng"]
+	path = tests/marmalade-ng
+	url = git@github.com:Marmalade-NG/marmalade-ng.git
+[submodule "tests/kadena_repl_sandbox"]
+	path = tests/kadena_repl_sandbox
+	url = git@github.com:CryptoPascal31/kadena_repl_sandbox.git

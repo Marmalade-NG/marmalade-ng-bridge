@@ -1,2 +1,9 @@
 # marmalade-ng-bridge
-Bridging capability for Marmalade-NG
+
+Bridging capabilities for Marmalade-NG.
+
+WIP
+
+Doc: https://marmalade-ng-bridge.readthedocs.io
+
+![Marmalade-NG bridge](./doc/source/diagrams/bridge.svg")

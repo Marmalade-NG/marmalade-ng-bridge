@@ -1,0 +1,80 @@
+; Init common admin keyset
+(begin-tx)
+(namespace 'user)
+(env-data {'ks:["adm"]})
+(define-keyset "user.admin" (read-keyset 'ks))
+(commit-tx)
+
+(begin-tx)
+(env-sigs [{'key:"adm", 'caps:[]}])
+(env-data {'admin_keyset:"user.admin",
+           'extra_policies_admin_keyset:"user.admin"})
+
+(use basic-guards)
+(define-namespace 'marmalade-ng-A GUARD_SUCCESS GUARD_SUCCESS)
+(define-namespace 'marmalade-ng-B GUARD_SUCCESS GUARD_SUCCESS)
+
+(namespace 'kip)
+(load "../marmalade-ng/pact/kip/ng-poly-fungible-v1.pact")
+
+(namespace 'marmalade-ng-A)
+(load "../marmalade-ng/pact/policies/token-policy-ng-v1.pact")
+(load "../marmalade-ng/pact/utils/util-policies.pact")
+(load "../marmalade-ng/pact/ledger.pact")
+
+(create-table ledger)
+(create-table tokens)
+
+(load "../marmalade-ng/pact/policies/policy-adjustable-royalty.pact")
+(load "../marmalade-ng/pact/policies/policy-auction-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-blacklist.pact")
+(load "../marmalade-ng/pact/policies/policy-collection.pact")
+(load "../marmalade-ng/pact/policies/policy-disable-burn.pact")
+(load "../marmalade-ng/pact/policies/policy-disable-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-disable-transfer.pact")
+(load "../marmalade-ng/pact/policies/policy-dutch-auction-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-extra-policies.pact")
+(load "../marmalade-ng/pact/policies/policy-fixed-issuance.pact")
+(load "../marmalade-ng/pact/policies/policy-fixed-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-guards.pact")
+(load "../marmalade-ng/pact/policies/policy-instant-mint.pact")
+(load "../marmalade-ng/pact/policies/policy-marketplace.pact")
+(load "../marmalade-ng/pact/policies/policy-non-fungible.pact")
+(load "../marmalade-ng/pact/policies/policy-royalty.pact")
+(load "../marmalade-ng/pact/policies/policy-trusted-custody.pact")
+(load "../marmalade-ng/pact/utils/std-policies.pact")
+(print "Marmalade NG - A  initialized")
+
+
+(namespace 'marmalade-ng-B)
+(load "../marmalade-ng/pact/policies/token-policy-ng-v1.pact")
+(load "../marmalade-ng/pact/utils/util-policies.pact")
+(load "../marmalade-ng/pact/ledger.pact")
+
+(create-table ledger)
+(create-table tokens)
+
+(load "../marmalade-ng/pact/policies/policy-adjustable-royalty.pact")
+(load "../marmalade-ng/pact/policies/policy-auction-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-blacklist.pact")
+(load "../marmalade-ng/pact/policies/policy-collection.pact")
+(load "../marmalade-ng/pact/policies/policy-disable-burn.pact")
+(load "../marmalade-ng/pact/policies/policy-disable-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-disable-transfer.pact")
+(load "../marmalade-ng/pact/policies/policy-dutch-auction-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-extra-policies.pact")
+(load "../marmalade-ng/pact/policies/policy-fixed-issuance.pact")
+(load "../marmalade-ng/pact/policies/policy-fixed-sale.pact")
+(load "../marmalade-ng/pact/policies/policy-guards.pact")
+(load "../marmalade-ng/pact/policies/policy-instant-mint.pact")
+(load "../marmalade-ng/pact/policies/policy-marketplace.pact")
+(load "../marmalade-ng/pact/policies/policy-non-fungible.pact")
+(load "../marmalade-ng/pact/policies/policy-royalty.pact")
+(load "../marmalade-ng/pact/policies/policy-trusted-custody.pact")
+(load "../marmalade-ng/pact/utils/std-policies.pact")
+
+(print "Marmalade NG - B  initialized")
+
+(commit-tx)
+
+(print "Marmalade NG initialized")

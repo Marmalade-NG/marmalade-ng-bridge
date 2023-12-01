@@ -1,0 +1,12 @@
+(env-data {"disable-marmalade-v1":true})
+(load "kadena_repl_sandbox/kda-env/init.repl")
+(load "init/init-marmalade-ng.repl")
+(load "init/init-bridge.repl")
+
+(typecheck "marmalade-ng-bridge.bridge-utils")
+(typecheck "marmalade-ng-bridge.bridge")
+
+(typecheck "marmalade-ng-bridge.policy-bridge-inbound")
+(typecheck "marmalade-ng-bridge.policy-bridge-inbound-guard-mint")
+(typecheck "marmalade-ng-bridge.policy-bridge-inbound-instant-mint")
+(typecheck "marmalade-ng-bridge.policy-bridge-outbound")

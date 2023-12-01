@@ -1,0 +1,33 @@
+(env-data {"disable-marmalade-v1":true})
+(load "kadena_repl_sandbox/kda-env/init.repl")
+(load "init/init-marmalade-ng.repl")
+(load "init/init-bridge.repl")
+
+
+(begin-tx)
+(use marmalade-ng-bridge.bridge-std-policies)
+(use free.util-strings)
+
+(expect-that "No policies"   (compose (map (to-string)) (= []))
+                             (bridging-policies ""))
+
+(expect-that "Outbound"      (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-outbound"]))
+                             (bridging-policies "OUTBOUND"))
+
+(expect-that "In no mint"    (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-inbound"]))
+                             (bridging-policies "INBOUND-NO-MINT"))
+
+(expect-that "In I  mint"    (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-inbound-instant-mint"]))
+                             (bridging-policies "INBOUND-INSTANT-MINT"))
+
+(expect-that "In G  mint"    (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-inbound-guard-mint"]))
+                             (bridging-policies "INBOUND-GUARD-MINT"))
+
+(expect-that "Bidir no-mint" (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-outbound", "marmalade-ng-bridge.policy-bridge-inbound"]))
+                             (bridging-policies "BIDIR-NO-MINT"))
+
+(expect-that "Bidir  I-mint" (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-outbound", "marmalade-ng-bridge.policy-bridge-inbound-instant-mint"]))
+                             (bridging-policies "BIDIR-INSTANT-MINT"))
+
+(expect-that "Bidir  G-mint" (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-outbound", "marmalade-ng-bridge.policy-bridge-inbound-guard-mint"]))
+                             (bridging-policies "BIDIR-GUARD-MINT"))

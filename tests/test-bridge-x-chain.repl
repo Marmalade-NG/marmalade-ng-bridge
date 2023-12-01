@@ -1,0 +1,187 @@
+(env-data {"disable-marmalade-v1":true})
+(load "kadena_repl_sandbox/kda-env/init.repl")
+(load "init/init-marmalade-ng.repl")
+(load "init/init-bridge.repl")
+
+;; X-chain simulations
+; We simulate a X-chain from chain 0 to chain 1
+; We are going to do many tricks to simulate it
+; Hope this issue https://github.com/kadena-io/pact/issues/1179 will be handled soon
+; But in the mean time we try it
+
+(begin-tx)
+(use marmalade-ng-A.ledger)
+(use marmalade-ng-A.std-policies)
+(use free.util-strings)
+
+
+(env-sigs [{'key:"create", 'caps:[(ENFORCE-RESERVED)]}])
+(env-data {'ks-c-1: ["create"]})
+
+(print (+ "Token ID: => " (create-token-id (read-keyset 'ks-c-1) "http://token-1" )))
+
+
+(env-data {'ks-c-1: ["create"],
+           'marmalade_bridge_inbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                      'source:{'ledger:"marmalade-ng-A.ledger",
+                                              'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                                              'chain:"0"}},
+           'marmalade_bridge_outbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                       'dest:{'ledger:"marmalade-ng-A.ledger",
+                                               'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                                               'chain:"1"}}})
+
+(create-token "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" 1 "http://token-1"
+              [marmalade-ng-bridge.policy-bridge-inbound-instant-mint,
+               marmalade-ng-bridge.policy-bridge-outbound]
+              (read-keyset 'ks-c-1))
+
+(env-data {'alice-ks:["alice"]})
+
+(mint "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" (read-keyset 'alice-ks) 1.0)
+
+(print "")
+(print "Balances for Alice:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+(print "---------------------")
+
+(expect "Total supply of token 1 should be 1.0" 1.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(commit-tx)
+
+
+; Bridge from chain 0 to chain 1
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+
+(env-chain-data { "chain-id": "0" })
+(env-hash (hash "X-chain-1"))
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+
+; try on a bad chain
+(expect-failure "Bad destination chain" "not granted"
+                (bridge-ng-xchain marmalade-ng-A.ledger "5"
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "alice" 1.0))
+
+; Try a bad amount
+(expect-failure "Bad amount" "Insuficient balance"
+                (bridge-ng-xchain marmalade-ng-A.ledger "5"
+                                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                "alice" 4.0))
+
+(bridge-ng-xchain marmalade-ng-A.ledger "1"
+                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                "alice" 1.0)
+
+(print "")
+(print "Pact State:")
+(print (pact-state))
+
+(print "")
+(print "Balances for Alice after first Pact step:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+(print "---------------------")
+; Because we burnt it token supply should be 0
+(expect "Total supply of token 1 should be 0.0" 0.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(commit-tx)
+
+
+; Bridge from chain 0 to chain 1 => OK
+(begin-tx)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+(env-chain-data { "chain-id": "1" })
+
+(continue-pact 1 false (hash "X-chain-1"))
+
+(print "")
+(print "Balances for Alice after 2nd pact step:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+(print "---------------------")
+
+(expect "Total supply of token 1 should be 1.0" 1.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(commit-tx)
+
+
+
+
+; Bridge from chain 1 to chain 0
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-bridge.policy-bridge-outbound)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+
+(env-chain-data { "chain-id": "1" })
+(env-hash (hash "X-chain-2"))
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+
+; Fisrt it shouldn't be allowed. We have a destination to chain 1 only
+(expect-failure "Bad destination chain" "not granted"
+                (bridge-ng-xchain marmalade-ng-A.ledger "0"
+                                  "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                  "alice" 1.0))
+
+; We have to change it to chain 0
+
+; First try without signature
+(env-sigs [])
+(expect-failure "Missing signature" "Keyset failure"
+                (set-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                                 {'ledger:"marmalade-ng-A.ledger",
+                                  'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                                  'chain:"0"}))
+
+
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM")]}])
+(set-destination "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                 {'ledger:"marmalade-ng-A.ledger",
+                  'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+                  'chain:"0"})
+
+(env-sigs [{'key:"alice", 'caps:[(BURN "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM" "alice" 1.0)]}])
+
+(bridge-ng-xchain marmalade-ng-A.ledger "0"
+                "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+                "alice" 1.0)
+
+(print "")
+(print "Pact State:")
+(print (pact-state))
+(commit-tx)
+
+
+; Complete the transaction from chain 1 to chain 0
+(begin-tx)
+(use marmalade-ng-A.ledger)
+(use marmalade-ng-bridge.policy-bridge-inbound-instant-mint)
+(use free.util-strings)
+(env-chain-data { "chain-id": "0" })
+
+; It may fail because the currently inbound policy does not expect tokens from chain 1
+(expect-failure "Bad source chain" "Not allowed to mint"
+                 (continue-pact 1 false (hash "X-chain-2")))
+
+; Change it
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM")]}])
+(set-source "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"
+            {'ledger:"marmalade-ng-A.ledger",
+            'token:"t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM",
+            'chain:"1"})
+
+; Now it should work
+(continue-pact 1 false (hash "X-chain-2"))
+
+(print "")
+(print "Balances for Alice after 2nd pact step:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+(print "---------------------")
+
+(expect "Total supply of token 1 should be 1.0" 1.0 (total-supply "t:r-4jQUrZWpYfEqq_iGvBn1ofgCLPoh2ZfG5kfAVX2KM"))
+(commit-tx)

@@ -1,0 +1,193 @@
+(env-data {"disable-marmalade-v1":false})
+(load "kadena_repl_sandbox/kda-env/init.repl")
+(load "init/init-marmalade-ng.repl")
+(load "init/init-bridge.repl")
+
+(begin-tx)
+(load "stubs/v1-bridgable-policy.pact")
+(load ".pact/helpers/marmalade-std-helper.pact")
+(commit-tx)
+
+(begin-tx "Create a V1 token")
+(use kip.token-manifest)
+(use marmalade.ledger)
+
+(let* ((uri {'scheme:"https", 'data:"//dog-1"})
+       (manifest (create-manifest uri [(create-datum uri {})]))
+       (v1-token-id (create-token-id manifest)))
+  (create-token v1-token-id 0 manifest v1-bridgable-policy)
+  (print (+ "V1 Token ID: => " v1-token-id)))
+
+  (env-data {'alice-ks:["alice"]})
+  (env-sigs [{'key:"unknown", 'caps:[(MINT "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" 1.0)]}])
+  (mint "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" (read-keyset 'alice-ks) 1.0)
+(commit-tx)
+
+
+(begin-tx "Create a NG token")
+; We mint on both NG ledgers but only ledger A will work (because declared in the v1-bridgable-policy)
+
+(env-sigs [{'key:"create", 'caps:[(marmalade-ng-A.ledger.ENFORCE-RESERVED), (marmalade-ng-B.ledger.ENFORCE-RESERVED) ]}])
+(env-data {'ks-c: ["create"]})
+
+(print (+ "NG Token ID: => " (marmalade-ng-A.ledger.create-token-id (read-keyset 'ks-c) "https://dog-1" )))
+
+(env-data {'ks-c: ["create"],
+           'marmalade_bridge_inbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
+                                      'source:{'ledger:"marmalade.ledger",
+                                              'token:"t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY",
+                                              'chain:""}}
+          })
+
+(marmalade-ng-A.ledger.create-token "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw" 1 "https://dog-1"
+                                    [marmalade-ng-bridge.policy-bridge-inbound]
+                                    (read-keyset 'ks-c))
+
+(marmalade-ng-B.ledger.create-token "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw" 1 "https://dog-1"
+                                    [marmalade-ng-bridge-B.policy-bridge-inbound]
+                                    (read-keyset 'ks-c))
+
+
+(expect-failure "The NG token is not mintable"
+  (marmalade-ng-A.ledger.mint "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw" "alice" (read-keyset 'alice-ks) 1.0))
+
+
+(expect "Total supply of NG token should be 0.0" 0.0 (marmalade-ng-A.ledger.total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+(expect "Total supply of NG token should be 0.0" 0.0 (marmalade-ng-B.ledger.total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+(commit-tx)
+
+
+; Bridge from V1 to NG
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+(expect "Total supply of V1 token should be 1.0" 1.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 0.0" 0.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+
+(env-sigs [{'key:"alice", 'caps:[(marmalade.ledger.BURN "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" 1.0)]}])
+
+(bridge-v1-to-ng marmalade.ledger
+                 marmalade-std-helper-v1
+                 marmalade-ng-A.ledger
+                "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
+                "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+                "alice" 1.0)
+
+(print "")
+(print "Balances for Alice:")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+
+(expect "Total supply of V1 token should be 0.0" 0.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 1.0" 1.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+; We rollback to do more tests
+(rollback-tx)
+
+; We try to bridge to Ledger NG -B should not work
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+
+(expect "Total supply of V1 token should be 1.0" 1.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 0.0" 0.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+
+(env-sigs [{'key:"alice", 'caps:[(marmalade.ledger.BURN "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" 1.0)]}])
+
+(expect-failure "Ledger not granted by V1 policy" "require-capability: not granted"
+                (bridge-v1-to-ng marmalade.ledger
+                                 marmalade-std-helper-v1
+                                 marmalade-ng-B.ledger
+                                "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
+                                "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+                                "alice" 1.0))
+; We rollback to do more tests
+(rollback-tx)
+
+
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+
+(expect "Total supply of V1 token should be 1.0" 1.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 0.0" 0.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+
+; We change the inbound target
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw")]},
+           {'key:"alice", 'caps:[(marmalade.ledger.BURN "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" 1.0)]}])
+; Set a bad ledger source
+(set-source "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+            {'ledger:"another-ledger", 'token:"t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY", 'chain:""})
+
+(expect-failure "Ledger not granted by V1 policy" "require-capability: not granted"
+                (bridge-v1-to-ng marmalade.ledger
+                                 marmalade-std-helper-v1
+                                 marmalade-ng-A.ledger
+                                "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
+                                "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+                                "alice" 1.0))
+; We rollback to do more tests
+(rollback-tx)
+
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+
+(expect "Total supply of V1 token should be 1.0" 1.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 0.0" 0.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+
+; We change the inbound target
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw")]},
+           {'key:"alice", 'caps:[(marmalade.ledger.BURN "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" 1.0)]}])
+; Set a bad token
+(set-source "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+            {'ledger:"marmalade.ledger", 'token:"t:another-token", 'chain:""})
+
+(expect-failure "Ledger not granted by V1 policy" "require-capability: not granted"
+                (bridge-v1-to-ng marmalade.ledger
+                                 marmalade-std-helper-v1
+                                 marmalade-ng-A.ledger
+                                "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
+                                "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+                                "alice" 1.0))
+; We rollback to do more tests
+(rollback-tx)
+
+;;; And finally, we bridge for good
+(begin-tx)
+(use marmalade-ng-bridge.bridge)
+(use marmalade-ng-A.ledger)
+(use free.util-strings)
+(use marmalade-ng-bridge.policy-bridge-inbound)
+
+(expect "Total supply of V1 token should be 1.0" 1.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 0.0" 0.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+
+; We change the inbound target
+(env-sigs [{'key:"creator", 'caps:[(UPDATE-BRIDGE "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw")]},
+           {'key:"alice", 'caps:[(marmalade.ledger.BURN "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY" "alice" 1.0)]}])
+; Set a bad token
+(set-source "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+            {'ledger:"marmalade.ledger", 'token:"t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY", 'chain:""})
+
+
+(bridge-v1-to-ng marmalade.ledger
+                 marmalade-std-helper-v1
+                 marmalade-ng-A.ledger
+                "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
+                "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"
+                "alice" 1.0)
+
+(print "")
+(print (join "\n" (map (to-string) (list-balances "alice"))))
+(print "Balances for Alice:")
+
+(expect "Total supply of V1 token should be 0.0" 0.0 (marmalade.ledger.total-supply "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"))
+(expect "Total supply of NG token should be 1.0" 1.0 (total-supply "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw"))
+
+(commit-tx)
