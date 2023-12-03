@@ -1,5 +1,7 @@
 all: tests
 
+PACT_BIN:=pact
+
 INIT_FILES=init/init-marmalade-ng.repl
 
 TEST_FILES=test-bridge-loop.repl
@@ -41,11 +43,11 @@ MACROS=-D__NG_INTERFACE_NAMESPACE__=kip \
 gen: ${PACT_FILES} ${PACT_POLICIES_A} ${PACT_POLICIES_B}
 
 tests: .pact ${PACT_FILES} ${PACT_POLICIES_A} ${PACT_POLICIES_B}
-	pact test-bridge-loop.repl
-	pact test-bridge-x-chain.repl
-	pact test-bridge-v1.repl 2>&1 | grep  -v "Using deprecated native create-module-guard"
-	pact test-bridge-generic-interface.repl
-	pact test-std-policies.repl
+	${PACT_BIN} test-bridge-loop.repl
+	${PACT_BIN} test-bridge-x-chain.repl
+	${PACT_BIN} test-bridge-v1.repl 2>&1 | grep  -v "Using deprecated native create-module-guard"
+	${PACT_BIN} test-bridge-generic-interface.repl
+	${PACT_BIN} test-std-policies.repl
 
 check_types: ${PACT_FILES} ${PACT_POLICIES_A} ${PACT_POLICIES_B}
 	pact check_types.repl

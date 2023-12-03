@@ -1,0 +1,30 @@
+name: CI-marmalade-ng
+
+
+on:
+  push:
+
+  workflow_dispatch:
+
+
+jobs:
+  UT:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Pact
+        run: |
+          wget -nv https://github.com/kadena-io/pact/releases/download/v4.9.0/pact-4.9.0-linux-20.04.zip
+          unzip pact-4.9.0-linux-20.04.zip  pact -d .bin
+          chmod +x .bin/pact
+
+      - name: Units Tests
+        run: |
+          cd tests
+          make PACT_BIN=../.bin/pact tests 2>&1 | tee out.txt
+          if [ "$(grep "Load successful" out.txt|wc -l )" -eq 5 ]; then echo "OK"; exit 0; else echo "Fail";exit 1; fi
+          cd ..
