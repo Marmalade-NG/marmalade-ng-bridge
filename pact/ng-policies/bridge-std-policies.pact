@@ -22,4 +22,20 @@
       ((= type "BIDIR-GUARD-MINT") [policy-bridge-outbound policy-bridge-inbound-guard-mint])
       [(enforce false "Unrecognized bridge type")])
   )
+
+  (defun from-bridging-policies:string (policies:[module{__NG_NAMESPACE__.token-policy-ng-v1}])
+    (let ((cp (lambda (x) (contains x policies))))
+      (if (cp policy-bridge-outbound)
+        (cond
+          ((cp policy-bridge-inbound) "BIDIR-NO-MINT")
+          ((cp policy-bridge-inbound-instant-mint) "BIDIR-INSTANT-MINT")
+          ((cp policy-bridge-inbound-guard-mint) "BIDIR-GUARD-MINT")
+          "OUTBOUND")
+        (cond
+          ((cp policy-bridge-inbound) "INBOUND-NO-MINT")
+          ((cp policy-bridge-inbound-instant-mint) "INBOUND-INSTANT-MINT")
+          ((cp policy-bridge-inbound-guard-mint) "INBOUND-GUARD-MINT")
+          "")
+      ))
+  )
 )

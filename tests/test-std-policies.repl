@@ -31,3 +31,23 @@
 
 (expect-that "Bidir  G-mint" (compose (map (to-string)) (= ["marmalade-ng-bridge.policy-bridge-outbound", "marmalade-ng-bridge.policy-bridge-inbound-guard-mint"]))
                              (bridging-policies "BIDIR-GUARD-MINT"))
+
+
+(expect "No policies"   ""                     (from-bridging-policies []))
+
+(expect "Outbound"      "OUTBOUND"             (from-bridging-policies [marmalade-ng-bridge.policy-bridge-outbound]))
+
+(expect "In no mint"    "INBOUND-NO-MINT"      (from-bridging-policies [marmalade-ng-bridge.policy-bridge-inbound]))
+
+(expect "In I  mint"    "INBOUND-INSTANT-MINT" (from-bridging-policies [marmalade-ng-bridge.policy-bridge-inbound-instant-mint]))
+
+(expect "In G  mint"    "INBOUND-GUARD-MINT"   (from-bridging-policies [marmalade-ng-bridge.policy-bridge-inbound-guard-mint]))
+
+(expect "Bidir no-mint" "BIDIR-NO-MINT"        (from-bridging-policies [marmalade-ng-bridge.policy-bridge-outbound
+                                                                        marmalade-ng-bridge.policy-bridge-inbound]))
+
+(expect "Bidir I mint"  "BIDIR-INSTANT-MINT"   (from-bridging-policies [marmalade-ng-bridge.policy-bridge-outbound
+                                                                        marmalade-ng-bridge.policy-bridge-inbound-instant-mint]))
+
+(expect "Bidir G mint"  "BIDIR-GUARD-MINT"     (from-bridging-policies [marmalade-ng-bridge.policy-bridge-outbound
+                                                                        marmalade-ng-bridge.policy-bridge-inbound-guard-mint]))
