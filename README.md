@@ -6,4 +6,4 @@ WIP
 
 Doc: https://marmalade-ng-bridge.readthedocs.io
 
-![Marmalade-NG bridge](./doc/source/diagrams/bridge.svg")
+![Marmalade-NG bridge](./doc/source/diagrams/bridge.svg)
