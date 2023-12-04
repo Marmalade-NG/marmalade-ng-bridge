@@ -8,4 +8,5 @@ Welcome to Marmalade NG Bridge's documentation!
    intro.rst
    concepts.rst
    adapters.rst
-   api.rst
+   api_bridge.rst
+   api_ng_policies.rst

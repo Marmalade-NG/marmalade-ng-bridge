@@ -1,8 +1,5 @@
-APIs
-====
-
-Bridge
-------
+Bridge API
+-----------
 External functions
 ^^^^^^^^^^^^^^^^^^
 
@@ -18,7 +15,7 @@ Example:
 
 .. code-block:: lisp
 
-  (bridge-ng-to-ng marmalade-ng.legder another-ns.ledger
+  (bridge-ng-to-ng marmalade-ng.ledger another-ns.ledger
                    "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
                    "k:35c6e214b516e03e3d609558e81636dc61f96782f52b1f72222528dbbf6170b4" 1.0)
 
@@ -35,7 +32,7 @@ Example:
 
 .. code-block:: lisp
 
-  (bridge-v1-to-ng marmalade.legder marmalade-ng-bridge.marmalade-std-helper
+  (bridge-v1-to-ng marmalade.ledger marmalade-ng-bridge.marmalade-std-helper
                    marmalade-ng.ledger
                    "t:422uU9AJHLeLr6iPGHCkUA_eIvTboKKp5dXaUmctCAw"
                    "t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY"
@@ -111,9 +108,3 @@ ALLOW-MINT
 *ledger* ``module{ng-poly-fungible-v1}`` *token-id* ``string`` *source* ``object{bridge-target}``
 
 Must be used by a Marmalade NG policy only, for minting tokens.
-
-
-Marmalade NG policies
----------------------
-
-TODO
