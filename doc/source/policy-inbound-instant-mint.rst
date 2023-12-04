@@ -8,7 +8,8 @@ Description
 
 Allows a token to be bridged in, according to the target object.
 
-This policy prevents any mint out of bridging context.
+This policy allows a token to be minted from nothing in the same transaction he has been created.
+Exactly like the ``INSTANT-MINT`` policy.
 
 **Note:** Incompatible with the ``INSTANT-MINT`` policy, or a guarded mint of the ``GUARD`` policy.
 

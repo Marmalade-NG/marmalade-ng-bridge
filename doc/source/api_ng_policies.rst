@@ -8,3 +8,4 @@ Marmalade NG policies API
    policy-inbound.rst
    policy-inbound-instant-mint.rst
    policy-inbound-guard-mint.rst
+   bridge-std-policies.rst
