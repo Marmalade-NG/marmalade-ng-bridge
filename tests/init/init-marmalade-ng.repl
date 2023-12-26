@@ -8,7 +8,8 @@
 (begin-tx)
 (env-sigs [{'key:"adm", 'caps:[]}])
 (env-data {'admin_keyset:"user.admin",
-           'extra_policies_admin_keyset:"user.admin"})
+           'extra_policies_admin_keyset:"user.admin",
+           'lock-namespace:false})
 
 (use basic-guards)
 (define-namespace 'marmalade-ng-A GUARD_SUCCESS GUARD_SUCCESS)
@@ -18,6 +19,7 @@
 (load "../marmalade-ng/pact/kip/ng-poly-fungible-v1.pact")
 
 (namespace 'marmalade-ng-A)
+(load "../marmalade-ng/pact/governance.pact")
 (load "../marmalade-ng/pact/policies/token-policy-ng-v1.pact")
 (load "../marmalade-ng/pact/utils/util-policies.pact")
 (load "../marmalade-ng/pact/ledger.pact")
@@ -47,6 +49,7 @@
 
 
 (namespace 'marmalade-ng-B)
+(load "../marmalade-ng/pact/governance.pact")
 (load "../marmalade-ng/pact/policies/token-policy-ng-v1.pact")
 (load "../marmalade-ng/pact/utils/util-policies.pact")
 (load "../marmalade-ng/pact/ledger.pact")
