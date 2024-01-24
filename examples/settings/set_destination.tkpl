@@ -1,0 +1,30 @@
+code: |-
+  (use {{bridge-namespace}}.policy-bridge-outbound)
+
+  (set-destination "{{token-id}}" (read-msg 'target))
+
+data:
+  target:
+    ledger: {{ledger}}
+    chain: "{{target-chain}}"
+    token: "{{target-token}}"
+
+publicMeta:
+  chainId: "{{chain}}"
+  sender: {{gas-payer}}
+  gasLimit: 1000
+  gasPrice: 0.00000001
+  ttl: 7200
+networkId: "{{network}}"
+signers:
+  - public: {{gas-payer-key}}
+    caps:
+      - name: "coin.GAS"
+        args: []
+  - public: {{creator-key}}
+    caps:
+      - name: "{{bridge-namespace}}.policy-bridge-outbound.UPDATE-BRIDGE"
+        args:
+          - {{token-id}}
+
+type: exec

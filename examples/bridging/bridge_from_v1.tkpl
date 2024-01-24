@@ -1,0 +1,30 @@
+code: |-
+  (use {{bridge-namespace}}.bridge)
+
+  (bridge-v1-to-ng marmalade.ledger {{bridge-namespace}}.marmalade-std-helper-v1
+                   {{namespace}}.ledger
+                  "{{src-token-id}}" "{{dst-token-id}}"
+                  "{{account}}" 1.0)
+
+data:
+
+publicMeta:
+  chainId: "{{chain}}"
+  sender: {{gas-payer}}
+  gasLimit: 10000
+  gasPrice: 0.00000001
+  ttl: 7200
+networkId: "{{network}}"
+signers:
+  - public: {{gas-payer-key}}
+    caps:
+      - name: "coin.GAS"
+        args: []
+  - public: {{account-key}}
+    caps:
+      - name: "marmalade.ledger.BURN"
+        args:
+          - {{src-token-id}}
+          - {{account}}
+          - {{amount}}
+type: exec

@@ -1,0 +1,76 @@
+# This code creates a token with the following policies:
+# - COLLECTION
+# - NON-FUNGIBLE
+# - FIXED-SALE
+# - AUCTION-SALE
+#
+# The token is sent to the receiver immediately since it is an instant-mint token.
+# The Token is an inbound token coming from Marmalade V1
+#
+#
+
+code: |-
+  (use {{namespace}}.ledger)
+  (use {{namespace}}.std-policies)
+  (use {{bridge-namespace}}.bridge-std-policies)
+
+
+  (create-token "{{token-id}}" 0 "{{uri}}"
+    (+ (to-policies "COLLECTION NON-FUNGIBLE FIXED-SALE AUCTION-SALE")
+       (bridging-policies "INBOUND-NO-MINT"))
+    (read-keyset 'ks-tmp))
+
+    "{{token-id}}"
+
+data:
+  ks-tmp:
+    - {{tmp-key}}
+
+  marmalade_collection:
+    id: {{collection-id}}
+
+  marmalade_bridge_inbound:
+    guard:
+      pred: keys-all
+      keys:
+        - {{creator-key}}
+    source:
+      ledger: marmalade.ledger
+      chain: ""
+      token: {{source-token-id}}
+
+
+  marmalade_royalty:
+    creator_acct: {{creator}}
+    creator_guard:
+      pred: keys-all
+      keys:
+        - {{creator-key}}
+    rate: 0.1
+    currencies:
+      - refSpec:
+        - namespace: ~
+          name: fungible-v2
+        refName:
+          namespace: ~
+          name: coin
+          
+publicMeta:
+  chainId: "{{chain}}"
+  sender: {{gas-payer}}
+  gasLimit: 10000
+  gasPrice: 0.00000001
+  ttl: 7200
+networkId: "{{network}}"
+signers:
+  - public: {{gas-payer-key}}
+    caps:
+      - name: "coin.GAS"
+        args: []
+  - public: {{collection-key}}
+    caps: []
+  - public: {{tmp-key}}
+    caps:
+      - name: "{{namespace}}.ledger.ENFORCE-RESERVED"
+        args: []
+type: exec
