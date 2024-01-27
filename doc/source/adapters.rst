@@ -74,6 +74,9 @@ Marmalade V1
 Helper
 ^^^^^^
 To bridge tokens from a Marmalade V1 ledger, a helper (gateway) module must be used.
+
+Only the direction "Generic -> NG" is supported
+
 The reason is that the poly-fungible-v2 interface standardized in **KIP-0013** doesn't expose the ``burn``
 function.
 
@@ -102,12 +105,74 @@ Example of an ``enforce-burn`` function of a Marmalade V1 policy, allowing bridg
                                        {'ledger:"marmalade-ng-A.ledger", 'token:"", 'chain:""}))
   )
 
-Other ledgers
--------------
+Other ledgers (generic)
+-----------------------
 
-TODO
+The bridge is able to handle tokens from other ledgers not based on Marmalade.
+In this case, poly-fungible tokens are not supported: only one owner per token-id. Token id can be any strings (not necessarily ``t:....`` )
+
+Only the direction "Generic -> NG" is supported.
+
+The ledger must implement the interface: ``generic-burnable-nft-v1``:
+
+.. literalinclude:: ../../pact/interfaces/generic-burnable-nft-v1.pact
+   :language: lisp
+
+
+The two following functions must be implemented.
+
+burn
+^^^^
+*token-id* ``string`` *→* ``bool``
+
+Should burn definitively the token and call somewhere:
+
+.. code-block:: lisp
+
+  (require-capability (ALLOW-BURN-GENERIC generic-ledger token-id
+                                          {'ledger:"marmalade-ng-A.ledger", 'token:"", 'chain:""}))
+
+owner-details
+^^^^^^^^^^^^^
+*token-id* ``string`` *→* ``object{burnable-nft-details}``
+
+This function must return the owner account and the guard of the token.
+
+Because it must be compatible with Marmalade NG, if the owner is a principal account, the guard must match with it.
+
+
 
 Outbound considerations
 -----------------------
 
-TODO
+The security of bridge is only granted by the inbound policies and the inbound targets.
+As such, outbound targets are not strictly necessary. Even the ``policy-bridge-outbound`` is not strictly necessary.
+But using the *outbound targets* properly improves the security of the bridge users by preventing them of losing funds (like mistakenly burning a token),
+or getting scammed by phishing ...
+
+For setting-up the outbound targets, we have 3 options:
+
+No outbound target
+^^^^^^^^^^^^^^^^^^
+- In case of NG ledger: not using the ``policy-output-bridge`` at all.
+- In case of V1 or generic ledger: not using ``(require-capability (ALLOW-BURN .....))`` in the ``burn`` or ``enforce-burn`` function.
+
+This is the easiest and the less safe option. It works, but is not recommended. An error of the user could end in a token loss.
+
+
+Relaxed outbound target
+^^^^^^^^^^^^^^^^^^^^^^^
+A relaxed outbound target means that the target token is left intentionally blank. Only the field ``ledger`` is set.
+
+This is definitively a safer option than the *No outbound target* one.
+It has the advantage of being relatively simple. All similar tokens (same collection / same policy and/or same issuer) can share the same target.
+
+
+Full outbound target
+^^^^^^^^^^^^^^^^^^^^
+All fields of the target object are set: ``ledger`` and ``token`` (and eventually ``chain`` in case of X-chain).
+This is the best and the recommended option.
+
+The bridgeability of token is completely *locked* from both side of the path. But the creator must set up each token one by one on both sides, increasing the complexity of the token's management.
+
+Moreover, in case of a generic or V1 ledger, an additional registry must be added in the source ledger or the V1 policy.

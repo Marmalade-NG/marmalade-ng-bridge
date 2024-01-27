@@ -70,7 +70,7 @@ The target must be setup according to this table:
 
   * - Inbound (X-chain)
     - FQN of the current ledger
-    - Current token-id or ``""``
+    - Current token-id
     - Source chain
 
 *(1)* : FQN is the Kadena fully qualified name of the ledger's module: ie: `ns.module`
