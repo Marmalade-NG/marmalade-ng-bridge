@@ -33,6 +33,7 @@
 (print (+ "NG Token ID: => " (marmalade-ng-A.ledger.create-token-id (read-keyset 'ks-c) "https://dog-1" )))
 
 (env-data {'ks-c: ["create"],
+           'alice-ks: ["alice"],
            'marmalade_bridge_inbound:{'guard:{'pred:"keys-all", 'keys:["creator"]},
                                       'source:{'ledger:"marmalade.ledger",
                                               'token:"t:6TI5-4FQSmYakGsxlouN9h9RcGk4vxUQCxKi6rNJ1DY",
@@ -48,7 +49,7 @@
                                     (read-keyset 'ks-c))
 
 
-(expect-failure "The NG token is not mintable"
+(expect-failure "The NG token is not mintable" "require-capability: not granted"
   (marmalade-ng-A.ledger.mint "t:DVSCmFHKCJZHnAB4MISNPaW_0C1WMAuswSpDMJV0HDw" "alice" (read-keyset 'alice-ks) 1.0))
 
 
